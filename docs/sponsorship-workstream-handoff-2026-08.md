@@ -226,8 +226,15 @@ skip silently, so a suspiciously complete plan is itself a signal.
 and the live founding rate is **$18/mo**. The TropeLit session was instructed to report and stop,
 not to guess. Someone has to name the authoritative source.~~
 
-**Still open — one new question, in §6.4:** whether Bar Snap's adjacency helper is meant to
-have call sites. That one is a real decision and has not been made.
+**Decided 2026-08-10 by the product owner:**
+- Bar Snap's adjacency helper **is** meant to have call sites — it was a miss, not staging.
+  Prompt 6 (`docs/prompt-06-bar-snap-wire-adjacency-guard.md`) is written and ready to dispatch.
+- **Per-screen coverage is the standard**, not app-wide. TropeLit and Play Spotter guarding one
+  screen each is acceptable; neither needs an Android guard. No new work for those two.
+- Prompt 5 (manual test plans) is **on hold** until the Rule 3 work settles, so the plans get
+  written against final behaviour.
+
+No open decisions remain.
 
 ---
 
