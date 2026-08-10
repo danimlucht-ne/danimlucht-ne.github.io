@@ -70,11 +70,14 @@ downloads. Their substance is reproduced here.
 
 | # | Prompt | Target | Status |
 |---|--------|--------|--------|
-| 1 | Bar Snap presenting sponsor | bar-snap | dispatched |
-| 2 | TropeLit site sponsorship + quote terminus | trope-lit | dispatched, **was corrected mid-flight** |
-| 3 | Play Spotter stacking / ad-free / preview | play-place-finder | dispatched |
-| 4 | TropeLit advertise copy rewrite | trope-lit | dispatched |
-| 5 | Manual test plan generator | all three | dispatched |
+| 1 | Bar Snap presenting sponsor | bar-snap | **landed** — `33c4929` (PR #72), 2026-08-05 |
+| 2 | TropeLit site sponsorship + quote terminus | trope-lit | **landed** — branch `claude/sponsorship-quote-flow`, merged `111b810` |
+| 3 | Play Spotter stacking / ad-free / preview | play-place-finder | **landed** — `7964567` (PR #16), 2026-08-05 |
+| 4 | TropeLit advertise copy rewrite | trope-lit | **landed** — `7c3847f`, `355387f` (PR #128) |
+| 5 | Manual test plan generator | all three | **not landed anywhere** |
+
+Status column re-verified 2026-08-10 against `origin/main` in all three repos — see §6.
+The rest of §3 below is the *as-dispatched* record and describes pre-fix state. Read §6 first.
 
 ### 3.1 Bar Snap presenting sponsor — four parts
 
@@ -213,10 +216,18 @@ skip silently, so a suspiciously complete plan is itself a signal.
 
 ## 4. Open decisions for the product owner
 
-**`home_featured` pricing disagrees three ways** in TropeLit:
+> **CLOSED 2026-08-10 — this was not a disagreement.** See §6.3. The three numbers are a list
+> price, a superseded list price, and a promotional rate off that list price. Web and Android
+> both read **45** and have since `af5da0d` (2026-08-05), which changed both in one commit —
+> five days *before* this document called them contradictory. Nothing here is blocking.
+
+~~**`home_featured` pricing disagrees three ways** in TropeLit:
 `android/.../ui/advertise/CampaignSetupScreen.kt` says **45**, web `campaignTypes.ts` says **99**,
 and the live founding rate is **$18/mo**. The TropeLit session was instructed to report and stop,
-not to guess. Someone has to name the authoritative source.
+not to guess. Someone has to name the authoritative source.~~
+
+**Still open — one new question, in §6.4:** whether Bar Snap's adjacency helper is meant to
+have call sites. That one is a real decision and has not been made.
 
 ---
 
@@ -240,3 +251,119 @@ Every prompt after that failure carries a standing instruction to verify each cl
 document before acting on it, and the test-plan prompt states the rule directly:
 **do not assert the result of a search you did not run.** That instruction applies to whoever
 picks this up next, including future sessions of me.
+
+---
+
+## 6. Verified status — 2026-08-10 (coordinator pass 2)
+
+Everything in this section was checked against `origin/main` fetched on 2026-08-10:
+bar-snap `5134ac1`, trope-lit `d3a7dc2`, play-place-finder `7698178`. All three working
+trees started this session behind `origin/main` — the §5 stale-checkout failure again — so
+every claim below is post-fetch. Where I did not verify something, it says so.
+
+### 6.1 Four of the five prompts had already landed
+
+They landed on 2026-08-05/06, i.e. *before* §3 was written declaring them merely dispatched.
+The correct read is that §3's defect descriptions are a snapshot of pre-fix state, not a
+to-do list. Anyone acting on §3 literally would re-fix fixed code.
+
+Spot-verified in current code rather than trusted from commit titles:
+
+- **Rule 1 (header, not banner).** Bar Snap `website/src/components/PresentingSponsorLine.tsx`
+  and `android/.../ui/components/PresentingSponsorLine.kt` exist; `PartnerSponsorBanner.tsx`
+  and `PartnerSponsorCard.kt` were deleted; `website/src/app/page.tsx` lost the second banner.
+- **Rule 2 (ad-free spares only the national sponsor).** Bar Snap
+  `StateSponsorBanner.tsx:57` now reads `if (adFree) return null;` — the surface, not the fill.
+  The old `if (adFree && type !== 'paid')` is gone. `PresentingSponsorLine.tsx` contains no
+  ad-free check, so the header is exempt as required. TropeLit
+  `website/src/components/layout/SponsorStrip.tsx` likewise contains no ad-free reference,
+  with gating centralised in `website/src/components/ads/useAdFree.ts`.
+- **TropeLit Android parity.** `SiteSponsorStrip()` is now mounted at
+  `android/.../navigation/TropeFinderNavigation.kt:142` — navigation level, not home-only.
+  `labelText` is supported on both surfaces (`SponsorStrip.tsx:65`, `SponsorStrip.kt:102`).
+- **TropeLit bounce bug fixed.** The `window.location.href` navigation is gone from
+  `CampaignForm.tsx`; the call site is now in-form state, and the removed behaviour is
+  documented in a comment at `:157-162`.
+- **TropeLit copy.** `placementCopy.ts` and its server mirror plus the parity test are all
+  present. The three author-assuming strings named in §3.4 no longer match. Remaining
+  "your book" hits are in profile/badges/share/lists — reader-facing, out of scope.
+
+### 6.2 Prompt 5 did not run anywhere
+
+There is no `docs/manual-test-plan.md` in any of the three repos, and neither
+`play-place-finder/docs/SESSION_HANDOFF_2026-08-10.md` nor
+`trope-lit/docs/SESSION_HANDOFF_2026-08-09.md` mentions a test plan at all. This is the one
+prompt that produced nothing. It is also the one whose §3.5 spec is the most detailed, so
+re-dispatch should be cheap. **The §3.5 warning still stands and is now sharper:** Play
+Spotter's ad-free tier is a stub that always returns true (§6.3), so any Play Spotter plan
+claiming ad-free coverage is wrong on its face.
+
+### 6.3 Pricing: closed, and it was never three-way
+
+`af5da0d` (2026-08-05) changed web `campaignTypes.ts` from 99 to 45 *and* touched
+`android/.../CampaignSetupScreen.kt` in the same commit. Current values, read today:
+
+| Source | Value |
+|---|---|
+| `website/src/components/advertise/campaignTypes.ts:7` | `price: 45` |
+| `android/.../ui/advertise/CampaignSetupScreen.kt` (`home_featured`) | `45` |
+| `server/src/services/stripe.service.ts:13` | `home_featured: 45` |
+| `server/src/services/foundingRate.service.ts:72` | floor `15`, commented *"list dropped from $99 to $45; 60% off = $18, so floor must be ≤$18"* |
+
+So: **$45 is the list price and both surfaces agree**; **$18/mo is the founding rate, which is
+60% off $45**; **$99 is the superseded list price**. A list price and a promotional rate are
+not in conflict, and the founding-rate service states the relationship in a comment.
+
+One loose end, minor and *not* a pricing conflict: two server test fixtures still carry the
+old 99 — `server/tests/stripe.webhook.payments.test.ts:82` and
+`server/tests/ad.controller.test.ts:90`. They are local mock price tables, so they do not
+affect what a customer is charged, but a fixture pinned to a dead price can mask a real
+pricing regression. Worth a cleanup ticket, not a blocker.
+
+### 6.4 Rule 3 diverged three ways — and Bar Snap's guard is dead code
+
+All three apps built a computed runtime guard, which is the right shape. None of them built
+the same one, and none share an implementation:
+
+| App | Mechanism | Platform coverage | Applied at |
+|---|---|---|---|
+| Bar Snap | pure order-driven fn, `website/src/lib/adAdjacency.ts` + Kotlin mirror `android/composeApp/.../ads/AdAdjacency.kt` | web + Android | **nowhere** |
+| TropeLit | `keepAds` from `website/src/components/ads/adLayout.ts` | web only | `SearchResults.tsx:11` only |
+| Play Spotter | React context `AdSlotSequence` + `useAdSlotVisible` | web only | `discover/page.js`, via `RegionSponsorSlot` / `SponsorPlacement` |
+
+**The finding that matters: Bar Snap's adjacency guard has no production call sites on either
+platform.** `resolveAdSlots` / `hasAdjacentAds` are imported only by
+`website/tests/ad-adjacency.spec.ts`; the Kotlin `AdAdjacency` is referenced only by
+`AdAdjacencyTest.kt`. Both are well-tested — 122 and 137 lines of test respectively — and both
+are unreachable from the app. Bar Snap's actual Rule 3 compliance today rests on having
+*deleted* the second banner from `page.tsx`, which is a source-order fix. That is precisely
+the reasoning the helper's own docstring rejects: *"static source order does not prove
+non-adjacency."* Green tests are actively hiding this.
+
+I am not calling this a defect on my own authority, because it may be deliberate staging —
+land the helper with tests, wire it when a second placement lands. **This needs the product
+owner to say which.** If it is meant to be wired, that is a new Bar Snap prompt.
+
+Secondary divergence, lower stakes: TropeLit and Play Spotter each guard exactly one screen
+(search results; discover) and neither has an Android guard. Bar Snap is the only app that
+wrote the Kotlin side at all. If Rule 3 is meant to hold app-wide rather than screen-wise,
+two of the three are under-covered.
+
+### 6.5 Rule 2 diverged honestly
+
+Play Spotter's `website/app/lib/adEligibility.js` is a stub returning `true` unconditionally,
+with a comment saying no premium tier exists yet and naming the single place to wire one in.
+That matches §3.3 finding 2 exactly and is the right call — it is a seam, not a claim. Bar
+Snap and TropeLit both have real ad-free tiers and both spare the sponsor strip. No conflict
+between the three; Play Spotter is simply a tier behind, deliberately.
+
+### 6.6 What I did not verify
+
+- Whether the landed code *works* — I read source, ran nothing, and there is no test run in
+  this session's record.
+- Play Spotter's quote-terminus and Bar Snap's quote-terminus beyond file existence
+  (`quoteExpiry.service.ts`, `quoteAvailability.test.ts` are present in the #72 diff; I did
+  not read their logic or check the idempotency-guard-in-the-filter point from §2).
+- The §3.1 dead-banner-fields question — whether `bannerImageUrl` survived as the logo field
+  the header needs. The #72 diff touches `SponsorshipBooking.ts` (+15/-…) but I did not read it.
+- Anything in PlayBound, which remains out of scope.
