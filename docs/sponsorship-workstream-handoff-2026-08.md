@@ -384,9 +384,31 @@ next session does not have to rediscover their state, which is exactly the failu
 
 | # | Prompt | Target | Status |
 |---|--------|--------|--------|
-| 6 | Wire the adjacency guard (`prompt-06-…`) | bar-snap | written, **not dispatched** |
-| 7 | macOS / Safari website audit (`prompt-07-…`) | all three | written, **not dispatched** |
+| 6 | Wire the adjacency guard (`prompt-06-…`) | bar-snap | ✅ **landed (partial)**, PR #77 → `2e1be2e` |
+| 7 | macOS / Safari website audit (`prompt-07-…`) | all three | ✅ **landed**, bar-snap #78, play-place-finder #26, trope-lit |
 | 8 | Remove playspotterapp.com (`prompt-08-…`) | play-place-finder | ✅ **landed**, PR #30 → `18d1331` |
+
+**I got this table wrong on first writing** — it said 6 and 7 were undispatched. They had both
+been dispatched and completed; the product owner corrected me and was right. The cause is the
+same one §6.1 records: I wrote status from my own notes instead of from the repos, having read
+each one at a `main` that had since moved. Verified below against bar-snap `47290f2`,
+trope-lit `cb511f7`, play-place-finder `fe4e729`.
+
+**Prompt 6, verified landed but partial.** `website/src/lib/homeAdFlow.ts` imports and calls
+`resolveAdSlots`, consumed by `HomeFeaturedAdSlot.tsx:4` — so the home page has a real call site
+and the guard is no longer dead code. **Two of the three named surfaces are still unwired:**
+`website/src/app/recipes/page.tsx` has no reference to the guard, and Kotlin `AdAdjacency` still
+has no production call site (only its own test). Whether that is deliberate — the commit is
+scoped "Home ad slot guard" — or unfinished is a question for the product owner, not an
+assumption to make here.
+
+**Prompt 7, verified landed on all three.**
+- bar-snap: `desktop-safari` Playwright project (`playwright.config.ts:74-76`, `devices['Desktop Safari']`)
+  **and** the COOP fix — `next.config.js:22` now sets `Cross-Origin-Opener-Policy: same-origin-allow-popups`,
+  which was the highest-value item in that prompt.
+- trope-lit: `desktop-safari` project (`playwright.config.ts:65-66`).
+- play-place-finder: `backdrop-filter` prefix parity restored — 4 unprefixed / 4 prefixed, with
+  `-webkit-` added at `:2781` and `:3267`, the exact two the prompt named.
 
 **Prompt 6** exists because the product owner ruled that Bar Snap's unused adjacency guard
 (§6.4) was a miss, not staging. They also ruled that **per-screen coverage is the standard**, so
