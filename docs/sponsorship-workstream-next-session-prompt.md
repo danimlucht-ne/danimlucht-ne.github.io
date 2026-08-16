@@ -1,5 +1,30 @@
 # Prompt for the next session
 
+> ## ⚠️ SUPERSEDED 2026-08-16 — do not paste this as-is
+>
+> This prompt describes the workstream as of 2026-08-10 and its central claim is now false.
+> It says *"Five prompts were dispatched. Nothing has been confirmed as landed."*
+> **All eight prompts have landed.** Prompts 1-5 had already landed when this was written;
+> 6-8 landed since. See §6 and §7 of `sponsorship-workstream-handoff-2026-08.md` for the
+> verified state.
+>
+> This file is left in place because it is a good record of *how* to work this workstream —
+> the register for writing prompts, the rule against asserting unrun searches, the instruction
+> to treat a session's pushback as right until disproven. Those all still hold. Only the
+> status claims are stale.
+>
+> **It has now misled two consecutive sessions**, both of which read it, believed nothing had
+> landed, and wrote work against code that was already fixed. If you are picking this up: read
+> the handoff's §6 and §7 first, then re-verify against the repos before trusting either
+> document. Status written down is stale the moment a branch merges; the repo is the only
+> source of truth.
+>
+> There is one genuinely open question, in §7: prompt 6 named three surfaces and only the home
+> page was wired. Whether the recipes page and the Kotlin `AdAdjacency` were left out
+> deliberately needs the product owner to say.
+
+---
+
 Paste everything below the line into a new session.
 
 ---
