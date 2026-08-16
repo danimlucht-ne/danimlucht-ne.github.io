@@ -374,3 +374,38 @@ between the three; Play Spotter is simply a tier behind, deliberately.
 - The §3.1 dead-banner-fields question — whether `bannerImageUrl` survived as the logo field
   the header needs. The #72 diff touches `SponsorshipBooking.ts` (+15/-…) but I did not read it.
 - Anything in PlayBound, which remains out of scope.
+
+---
+
+## 7. Prompts 6-8 — status (2026-08-16)
+
+§3's table covers the original five. Three more were written since. Tracking them here so the
+next session does not have to rediscover their state, which is exactly the failure §6.1 records.
+
+| # | Prompt | Target | Status |
+|---|--------|--------|--------|
+| 6 | Wire the adjacency guard (`prompt-06-…`) | bar-snap | written, **not dispatched** |
+| 7 | macOS / Safari website audit (`prompt-07-…`) | all three | written, **not dispatched** |
+| 8 | Remove playspotterapp.com (`prompt-08-…`) | play-place-finder | ✅ **landed**, PR #30 → `18d1331` |
+
+**Prompt 6** exists because the product owner ruled that Bar Snap's unused adjacency guard
+(§6.4) was a miss, not staging. They also ruled that **per-screen coverage is the standard**, so
+TropeLit and Play Spotter need no Rule 3 work, and that **Prompt 5 (test plans) is on hold**
+until Rule 3 settles.
+
+**Prompt 7** came out of a macOS/Safari pass over the three websites. Its headline findings:
+Bar Snap and TropeLit run WebKit only at phone viewports, so neither tests Desktop Safari at
+all; Bar Snap uses `signInWithPopup` with no COOP header, no first-party auth domain and no
+redirect fallback, where TropeLit has solved the same problem properly and Play Spotter has
+solved half of it; and Play Spotter has two unprefixed `backdrop-filter` rules in a file that
+prefixes the other two. It also carries a verified-clean list so three sessions do not each
+rediscover the same negatives.
+
+**Prompt 8** was executed by the coordinator directly rather than dispatched. See the banner at
+the top of that file — what shipped deliberately went beyond what the prompt specified.
+
+**Line-number warning, sharper than §5.** Play Spotter's `main` moved three times in a single
+day while these were being written (`7698178` → `d1c5e72` → `0de9b6a`), and one prompt's cited
+lines shifted by three in the space of a few hours. Prompt 7's Play Spotter citations were read
+at `d1c5e72`. Anyone dispatching these later should tell the receiving session to locate code by
+content, not by line number.

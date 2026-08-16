@@ -1,6 +1,24 @@
 # Prompt 8 — Play Spotter: remove the playspotterapp.com domain from code
 
-Small, self-contained. Paste everything below the line into a Play Spotter session.
+> ## ✅ LANDED — do not dispatch this prompt
+>
+> Merged 2026-08-16 as **play-place-finder PR #30**, squashed to `main` as `18d1331`.
+> CI green: `server-tests`, `website-tests`, `website-e2e-mocked` all passed
+> (`website-e2e-live` skipped by design).
+>
+> The coordinator session made this change directly rather than handing it off, so the prompt
+> below was never dispatched. It is kept as the record of what was changed and why.
+>
+> **What shipped went further than this prompt asked.** The prompt said to leave
+> `MarketingLinks.SUPPORT_EMAIL` alone. That was later reversed on the product owner's
+> instruction, because the constant turned out to be interpolated into the in-app Privacy
+> Policy contact section (`LegalDocumentMirror.kt:175`), the in-app Terms of Service contact
+> section (`:254`), and the advertiser `TermsScreen.kt:158` — so the app and the website were
+> publishing different contact addresses inside documents meant to be identical copies. It is
+> now `support@play-spotter.com`, matching the server templates, `website/app/lib/contactEmails.js`,
+> and the published legal docs. `grep -rn "playspotterapp"` returns no matches repo-wide.
+>
+> **Do not act on the "Do NOT change" section below — it is superseded.**
 
 ---
 
