@@ -431,3 +431,101 @@ day while these were being written (`7698178` → `d1c5e72` → `0de9b6a`), and 
 lines shifted by three in the space of a few hours. Prompt 7's Play Spotter citations were read
 at `d1c5e72`. Anyone dispatching these later should tell the receiving session to locate code by
 content, not by line number.
+
+---
+
+## 8. Email consistency across the three apps — 2026-09-08
+
+The three apps are published by one company and read as three. A single advertiser who dealt with
+two of them got two different sign-offs, two different reply behaviours, two different promises
+about when we'd get back to them, and — in one app — a support address that appears nowhere in
+that app's own config.
+
+`docs/prompt-09-email-consistency-audit.md` is the full audit. This section records what shipped.
+
+### 8.1 The agreed standard
+
+Derived from what the apps already did, picking the best-argued existing behaviour rather than
+inventing a fourth convention.
+
+| Element | Standard | Came from |
+|---|---|---|
+| Reply-To, support/auth mail | `support@<domain>` | Bar Snap |
+| Reply-To, advertiser mail | `advertise@<domain>` | Bar Snap |
+| Sign-off | `Lucht Applications LLC` / `<App>` | Play Spotter |
+| Subject | `<App>: sentence case` | TropeLit |
+| Greeting | contact person → business → `there` | TropeLit |
+| Advertiser footer | Agreement link + `advertise@` + dashboard | Play Spotter |
+| Inbound response promise | **2 business days** | TropeLit |
+| Commercial mail | postal address + one-click opt-out | nobody |
+
+Two choices worth recording because they were judgement calls, not averages:
+
+- **2 business days over 48 hours.** Written 7pm Friday, "48 hours" expires Sunday evening.
+  Nobody reads partnership inquiries on Sunday. It is the promise we can actually keep.
+- **Contact person over business name.** Play Spotter greeted `businessName` first, so the same
+  submission produced "Hi Lucht Applications," from one app and "Hi Dani Lucht," from another.
+
+### 8.2 What shipped
+
+| PR | Repo | State |
+|---|---|---|
+| [#55](https://github.com/LuchtApplicationsLLC/play-place-finder/pull/55) | play-place-finder | ✅ **merged** → `5b8c136` — `admin@` removed from the two published support surfaces |
+| [#111](https://github.com/LuchtApplicationsLLC/bar-snap/pull/111) | bar-snap | open, **all checks green** |
+| [#200](https://github.com/LuchtApplicationsLLC/trope-lit/pull/200) | trope-lit | open, Backend green; two website jobs red **and already red on main** |
+| [#56](https://github.com/LuchtApplicationsLLC/play-place-finder/pull/56) | play-place-finder | open |
+
+### 8.3 The defects, and why each mattered
+
+- **Play Spotter published `admin@play-spotter.com`** on the website support page and the in-app
+  support screen. Not in either contact config; the same string is the seeded admin test account.
+  Whether it routes anywhere is unknown — mailbox config is outside the repos.
+- **Two apps invited replies that reached nobody.** Play Spotter set no default Reply-To (1 of 18
+  call sites passed one) while ~45 templates said "Reply to this email" and the From was
+  `noreply@`. TropeLit hardcoded Reply-To to `support@` with no override, and
+  `config.email.advertise` was defined and never read — so 18 advertiser emails saying "write to
+  advertise@tropelit.com" replied to support.
+- **Play Spotter greeted advertisers by their ad's headline.** `businessName || adDisplayName`
+  meant "Hi Free Coffee Tuesdays," across ~40 templates.
+- **The emails that quote a price were the ones missing the Agreement link.** Both Bar Snap and
+  TropeLit have a footer helper that attaches it, and in both the negotiated-partnership track
+  called it zero times while the self-serve track used it everywhere.
+- **No app carried a postal address on promotional mail** (15 U.S.C. 7704(a)(5)).
+
+### 8.4 The one design decision to keep in mind
+
+Each app now has a **marketing opt-out separate from its bounce/complaint suppression list**.
+They look similar and must not be merged: suppression protects the sending identity and stops
+*everything* to an address, receipts included. An opt-out is a choice about marketing, and
+7702(a)(2) draws the same line. Merging them would mean someone who declined a discount nudge
+silently stopped being told their payment failed — worse for them than the mail they opted out of.
+
+Bar Snap signs its opt-out link (HMAC of the address, no stored row). TropeLit and Play Spotter
+reuse their existing stored-token mechanisms. Different because Bar Snap has an app secret and the
+other two don't; adding one as a required env var would mean promotional mail silently carrying a
+dev-default signature until someone set it in production.
+
+### 8.5 Still open
+
+- **Auth email ownership.** Bar Snap sends verification and reset through Firebase's own
+  templates, so the first email a new user gets is Firebase-branded. TropeLit's signup
+  verification is Firebase's while its *resend* is branded — same action, two emails. Play
+  Spotter's Android reset bypasses its own branded template. Deliberately not in these PRs:
+  largest blast radius, least customer-visible payoff, and a product call.
+- **TropeLit's Android app publishes no contact address anywhere.** Grepping the whole tree for
+  any `@…com` returns nothing. A user in the app cannot reach support without leaving it. Fixing
+  it means choosing where it goes in the UI.
+- **`android.yml` in play-place-finder does not run on pull requests.** Its header comment claims
+  it "Runs on PRs touching android/composeApp, nightly, and on demand"; the actual trigger block
+  is `workflow_dispatch:` alone. A PR touching only `android/` gets no checks at all — `ci.yml`
+  filters to `server/**` and `website/**`. Dispatched manually for #55. Whether to re-add the
+  `pull_request` trigger is a CI-cost decision.
+
+### 8.6 What was not verified
+
+- Whether `admin@play-spotter.com` routed anywhere.
+- Whether the missing `legal@` aliases (Bar Snap has one; the others don't) are a gap or deliberate.
+- **Rendering.** Source was read and tests were written against what the code emits. No test mail
+  was sent, so nothing here is a claim about how a given client displays it.
+- The CAN-SPAM reading is a read of the statute against the code, not legal advice. The factual
+  half — that no app carried a postal address on promotional mail — was verified.
