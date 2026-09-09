@@ -562,7 +562,7 @@ write in about.
   the code emits; no test mail was sent. The layouts are new in all three apps, so send yourself
   one of each before trusting the rendering.
 
-### 8.6 What was not verified
+### 8.7 What was not verified
 
 - Whether `admin@play-spotter.com` routed anywhere.
 - Whether the missing `legal@` aliases (Bar Snap has one; the others don't) are a gap or deliberate.
@@ -570,3 +570,112 @@ write in about.
   was sent, so nothing here is a claim about how a given client displays it.
 - The CAN-SPAM reading is a read of the statute against the code, not legal advice. The factual
   half — that no app carried a postal address on promotional mail — was verified.
+
+---
+
+## 9. AdMob removed from Play Spotter — 2026-09-09
+
+[claude/remove-admob](https://github.com/LuchtApplicationsLLC/play-place-finder/tree/claude/remove-admob)
+in play-place-finder. Play Spotter was the only one of the three apps running AdMob.
+
+### 9.1 Why it was worth removing at four cents a month
+
+The revenue was the weakest argument for keeping it. What it cost:
+
+- A third-party ad SDK inside the one Lucht Applications app whose audience is families.
+- A Google UMP consent dialog, plus a settings row whose entire purpose was to re-open that dialog.
+- A Play data-safety disclosure and a subprocessor entry in the privacy policy.
+- Families-policy obligations about what may be served to whom.
+
+The house "advertise with us" card was already the last resort in the chain, so an unfilled slot
+now promotes our own sponsorships. That is the revenue line that actually works here.
+
+### 9.2 The chain collapsed, it was not just switched off
+
+Priority went from `local paid → AdMob → house placeholder` to `local paid → house placeholder`.
+`AdSlotSource` lost `ADMOB_FALLBACK`. Deleted: `AdMobBannerSlot` (both `expect` and `actual`),
+`AdMobConfig`, `AdMobInitializer`, `GoogleUmpConsent`, and `AdPrivacyChoicesRow` — that last one
+existed only to re-open the UMP form, so with AdMob gone it had nothing to show and was removed
+rather than re-pointed at something else.
+
+Also gone: the rotation padding that mixed AdMob into thin paid inventory
+(`useAdMobForInlineListSlot`, `paidInventoryLowEnoughForAdMobFill`, the three
+`MIN_PAID_*_BEFORE_ADMOB_FILL` thresholds). The web equivalents in `webHouseAds.js` stay — those
+thresholds still stop a sparse pool repeating one tile on every row; only the AdMob filler is gone.
+
+### 9.3 The server change is what turns AdMob off for phones already out there
+
+This is the part worth understanding before deploying.
+
+An installed build shows AdMob when the server sends `adSource: "admob_fallback"`, **or**
+`allowAdMobFallback: true`, **or** `type: "none"`. So the server now returns a house response in
+every case where it used to return `type: "none"` / `admob_fallback`, keeps emitting
+`allowAdMobFallback: false`, and never returns `type: "none"`. Deploying the server stops AdMob
+serving to existing installs without waiting for a Play rollout.
+
+The reverse guard is in the client: `resolveAdSlotSource` still maps an incoming `"admob_fallback"`
+to `HOUSE_AD`, so a new build talking to a server that has not been redeployed yet shows the house
+card instead of a blank slot. Either side can ship first.
+
+**Order matters for the privacy policy.** The policy now says there is no third-party ad network.
+Deploy the server before or with the website so that statement is true for every install the moment
+it is published, rather than true only for people who have taken the Play update.
+
+**One residual that only the app update fixes.** Old builds decide client-side to pad a *thin but
+non-empty* paid rotation with AdMob; the server cannot suppress that with `adSource` alone, because
+those responses are legitimately `type: "paid"`. Those slots keep showing AdMob until the user
+updates. Everything else stops at deploy.
+
+### 9.4 Legal copy
+
+| Document | Was | Now |
+|---|---|---|
+| Privacy Policy (site + in-app mirror) | 1.3 site / **1.2 in-app** | 1.4 both |
+| Terms (site + in-app mirror) | 1.3 site / **1.2 in-app** | 1.4 both |
+| Advertiser Agreement (site, in-app, server `CURRENT_TERMS_VERSION`) | 1.6 | 1.7 |
+
+The in-app mirror was a full minor version behind the live site before this change — worth knowing,
+because the mirror is what a user actually reads inside the app. They now land together.
+
+Substance: no third-party ad network, no ad SDK, no advertising-identifier use, no EEA/UK
+advertising consent prompt. The Google Ad Settings link is gone; the Google partner-sites link
+stays, because Firebase and Maps Platform are still in use and it genuinely applies to them.
+
+`ADULT_TERMS_CONSENT_VERSION` was **left at 2 on purpose.** Bumping it forces every existing user
+to re-accept, and this change only removes a subprocessor and reduces data sharing. If the lawyer
+wants a fresh acceptance on the record anyway, that is a one-line change on the server; it is
+decoupled from the document version numbers.
+
+`play-spotter-context-brief.md` — the document prepared for the attorney — carries a dated change
+note and its AdMob review item is rewritten, so the review does not run against copy that no longer
+describes the app.
+
+### 9.5 Verified
+
+- Play Spotter server suite: 161 of 163 suites pass. The two failures are the Stripe webhook and
+  pipeline integration suites, both `ECONNREFUSED 127.0.0.1:27017` — they need a live MongoDB and
+  fail identically on main.
+- Website: `npm test` green, `npm run build` clean (the legal markdown is built into
+  `/privacy` and `/terms`).
+- Android: `android.yml` dispatched by hand against the branch — play-place-finder's is
+  `workflow_dispatch:` only, as recorded in §8.6, so it does not run on the PR.
+
+### 9.6 Found on the way, unrelated to AdMob
+
+`PlaygroundFinder.postman_collection.json` was committed with a stray closing brace and trailing
+blank lines after the top-level object. `JSON.parse` failed on it, so
+`scripts/sync-postman-collection.cjs` could not run at all. Fixed, and the file is now the script's
+own output. The sample it carried for `/api/ads/client-metrics` also posted
+`event: "admob_impression"`, which was never in `VALID_CLIENT_METRICS` — anyone running that
+request got a 400.
+
+### 9.7 Still to do
+
+- **Delete the AdMob app and ad units in the Google AdMob console** once the new build is live.
+  Nothing in the repo can do this.
+- **Update the Play Console data-safety disclosures** to drop advertising-identifier collection and
+  ad-network sharing. The privacy policy now says we do not do these; the Play listing is a separate
+  form and still says we do.
+- Remove the `admob_fallback_*` entries from `VALID_CLIENT_METRICS` and the `allowAdMobFallback`
+  field from serving responses once old builds are out of circulation. Both are kept only for
+  installs that have not updated.
