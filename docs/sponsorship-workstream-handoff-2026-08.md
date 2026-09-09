@@ -505,21 +505,62 @@ reuse their existing stored-token mechanisms. Different because Bar Snap has an 
 other two don't; adding one as a required env var would mean promotional mail silently carrying a
 dev-default signature until someone set it in production.
 
-### 8.5 Still open
+### 8.5 Closed after §8.2 — auth email and the Android support gap
 
-- **Auth email ownership.** Bar Snap sends verification and reset through Firebase's own
-  templates, so the first email a new user gets is Firebase-branded. TropeLit's signup
-  verification is Firebase's while its *resend* is branded — same action, two emails. Play
-  Spotter's Android reset bypasses its own branded template. Deliberately not in these PRs:
-  largest blast radius, least customer-visible payoff, and a product call.
-- **TropeLit's Android app publishes no contact address anywhere.** Grepping the whole tree for
-  any `@…com` returns nothing. A user in the app cannot reach support without leaving it. Fixing
-  it means choosing where it goes in the UI.
-- **`android.yml` in play-place-finder does not run on pull requests.** Its header comment claims
-  it "Runs on PRs touching android/composeApp, nightly, and on demand"; the actual trigger block
-  is `workflow_dispatch:` alone. A PR touching only `android/` gets no checks at all — `ci.yml`
-  filters to `server/**` and `website/**`. Dispatched manually for #55. Whether to re-add the
-  `pull_request` trigger is a CI-cost decision.
+Both items §8.5 originally listed as open are done. All seven PRs are merged.
+
+| PR | Repo | What |
+|---|---|---|
+| [#113](https://github.com/LuchtApplicationsLLC/bar-snap/pull/113) | bar-snap | verification + reset were entirely Firebase's; now ours |
+| [#201](https://github.com/LuchtApplicationsLLC/trope-lit/pull/201) | trope-lit | auth email + the in-app support screen |
+| [#58](https://github.com/LuchtApplicationsLLC/play-place-finder/pull/58) | play-place-finder | Android reset, the last surface on a Firebase template |
+
+**Auth email.** Firebase still mints the links; the message around them is ours in all three.
+Each app has one module holding both bodies so signup, resend and reset cannot drift — which is
+exactly how TropeLit ended up sending a branded resend of an unbranded original.
+
+The send happens **server-side at the moment the account is created** — `/users/register` in
+TropeLit, the provisioning path in Bar Snap. It cannot be a client call to a resend endpoint: at
+Firebase-signup time no server account exists yet, so `authenticate` refuses and the mail silently
+does not send at all. That was the first thing I wrote and it would have been invisible.
+
+Two things came with it that were not in the original audit:
+
+- The reset endpoints now answer identically whether or not an address has an account. The old
+  flows surfaced Firebase's `auth/user-not-found` as "No account found with that email", which
+  told anyone who asked whether a given person uses the app.
+- The new public endpoints are rate-limited per IP+address. An endpoint that mails an address
+  chosen by an unauthenticated caller is otherwise a way to flood a stranger's inbox from our
+  domain and spend our sending reputation doing it.
+
+**TropeLit Android support.** A form in the drawer posting to the same `POST /api/support` the
+website uses, so both surfaces reach one queue. Not a `mailto:` — that needs a configured mail
+client, loses the account context the server takes from the token, and produces a message with no
+ticket behind it. It works signed out, because "I can't sign in" is one of the things people
+write in about.
+
+### 8.6 Still open
+
+- **Android CI does not run on pull requests in two of the three repos.** `android.yml` is
+  `workflow_dispatch:` only in **play-place-finder** and **trope-lit**, so a PR touching only
+  `android/` gets no automatic checks at all (each repo's web CI filters to server/website
+  paths). Both were dispatched by hand for the PRs above. **Bar Snap is the exception** — its
+  `android.yml` has a `pull_request` trigger on `android/**`, deliberately re-enabled as a gate
+  after a `graphicsLayer` import regression reached main. Whether to re-add the trigger in the
+  other two is a CI-cost decision.
+
+  *I asserted the opposite about Bar Snap mid-session, having read the other two repos' triggers
+  and generalised without opening Bar Snap's own file. Same failure as §6.1: a claim about
+  coverage taken from something other than the config in front of me.*
+
+- **Three pre-existing red checks on trope-lit `main`,** none from this workstream, each verified
+  by running the same job against main: `SiteSponsorshipBuilder.test.tsx` (2 of 29),
+  `partnership-pipeline.spec.ts:264` (the terms checkbox added in "Fix sponsor logo upload" leaves
+  Accept disabled and the spec never ticks it), and `SearchViewModelTest.kt:142,184`.
+
+- **Nothing here has been through a real inbox.** Source was read and tests written against what
+  the code emits; no test mail was sent. The layouts are new in all three apps, so send yourself
+  one of each before trusting the rendering.
 
 ### 8.6 What was not verified
 
